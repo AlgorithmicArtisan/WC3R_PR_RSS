@@ -1,0 +1,50 @@
+name: Generate RSS Feed
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'     # Запуск каждые 6 часов
+  workflow_dispatch:           # Возможность запустить вручную
+  push:
+    branches: [ main, master ] # Запуск при пуше (для теста)
+
+jobs:
+  generate-rss:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write           # Нужно, чтобы закоммитить файл обратно
+    
+    steps:
+      # 1. Загружаем код
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      # 2. Устанавливаем Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      # 3. Устанавливаем зависимости
+      - name: Install dependencies
+        run: |
+          pip install selenium beautifulsoup4 feedgen lxml
+      
+      # 4. Устанавливаем браузер для Selenium
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+      
+      # 5. Запускаем парсер
+      - name: Run parser
+        run: python parser.py
+      
+      # 6. Сохраняем изменения в репозиторий
+      - name: Commit and push
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add WarCraft_III_REFORGED.xml
+          git diff --quiet && git diff --staged --quiet || git commit -m "Автоматическое обновление RSS-ленты [skip ci]"
+          git push
